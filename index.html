@@ -30,11 +30,17 @@
         <!-- Header -->
         <header class="text-center mb-8">
             <h1 class="text-3xl lg:text-4xl font-extrabold text-blue-800 mb-2">
-                Sound Object Sheets Viewer
-                <span class="inline-block ml-2 px-3 py-1 text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full shadow-lg">📊 DATA MODE</span>
+                Sound Object Composite Image Generator
+                <span class="inline-block ml-2 px-3 py-1 text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full shadow-lg">📊 FROM DATA</span>
             </h1>
             <p class="text-lg sm:text-xl font-semibold text-gray-600">UCI Hearing & Speech Lab</p>
-            <p class="text-sm text-gray-500 mt-2">View averaged shapes from Google Sheets data</p>
+            <p class="text-sm text-gray-500 mt-2">Generate 11 composite images (one per frequency) from Google Sheets data</p>
+            <div class="mt-3 flex justify-center gap-2 flex-wrap text-xs">
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full border border-blue-300">11 Frequencies</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full border border-purple-300">Red & Blue Phases</span>
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full border border-green-300">Accurate Centroids</span>
+                <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full border border-amber-300">Circle Approximations</span>
+            </div>
         </header>
         
         <!-- Configuration -->
@@ -59,7 +65,7 @@
                         class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     >
                     <p class="text-xs text-gray-500 mt-2">
-                        Deploy the Google Apps Script from your Sheet and paste the Web App URL here. 
+                        Deploy the Google Apps Script from your Sheet (reading "Data" tab) and paste the Web App URL here. 
                         <a href="SETUP_INSTRUCTIONS.md" target="_blank" class="text-blue-600 underline">See setup instructions</a>
                     </p>
                 </div>
@@ -106,12 +112,15 @@
         <!-- Visualizations -->
         <div id="visualization-container" class="hidden mb-6">
             <div class="bg-white p-6 rounded-xl shadow-lg mb-4">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">Averaged Shape Visualizations</h2>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">11 Composite Images (One Per Frequency)</h2>
                 <p class="text-sm text-gray-600 mb-2">
-                    Circles represent shapes based on centroid and area from Google Sheets data
+                    Each image shows averaged shapes at one frequency, with circles representing individual participants based on centroid position and area from the Data tab
                 </p>
                 <p class="text-xs text-gray-500">
-                    Semi-transparent circles = individual participants • Solid outline = average
+                    🔴 Red (solid) = In-phase • 🔵 Blue (dashed) = Out-of-phase • Light circles = individual participants • Bold outline = average
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    Click any image to download as PNG
                 </p>
             </div>
             <div id="visualization-grid" class="analysis-grid"></div>
@@ -142,8 +151,8 @@
         
         <!-- Footer -->
         <footer class="text-center text-sm text-gray-500 mt-8 pb-4">
-            <p class="font-semibold">UCI Hearing & Speech Lab - Sound Object Sheets Viewer</p>
-            <p class="mt-1">Data-driven visualizations from Google Sheets</p>
+            <p class="font-semibold">UCI Hearing & Speech Lab - Sound Object Composite Image Generator</p>
+            <p class="mt-1">Generates 11 frequency-based composite visualizations from "Data" tab • Red & Blue phases</p>
         </footer>
     </div>
     
@@ -153,6 +162,8 @@
         const UNIT_RANGE = 10;
         const SCALE_FACTOR = CANVAS_SIZE / (2 * UNIT_RANGE);
         const BACKGROUND_CIRCLE_RADIUS_UNITS = 3;
+        
+        // The 11 frequencies we generate composite images for
         const FREQUENCIES = [31, 62.5, 125, 250, 500, 1000, 2000, 4000, 8000, 12000, 16000];
         
         let sheetsApiUrl = '';
@@ -285,11 +296,13 @@
                     }
                 });
                 
-                updateProgress(50, 'Generating visualizations...');
+                updateProgress(50, 'Generating 11 composite images (one per frequency)...');
                 
                 // Generate visualizations
                 const vizGrid = document.getElementById('visualization-grid');
                 vizGrid.innerHTML = '';
+                
+                let imagesGenerated = 0;
                 
                 FREQUENCIES.forEach(freq => {
                     const redData = participantData[freq].red;
@@ -298,6 +311,7 @@
                     if (redData.length === 0 && blueData.length === 0) return;
                     
                     const canvas = drawVisualization(freq, redData, blueData);
+                    imagesGenerated++;
                     
                     const container = document.createElement('div');
                     container.className = 'canvas-container p-4 cursor-pointer hover:shadow-xl transition-shadow';
@@ -311,12 +325,13 @@
                             <span class="text-red-600">Red: ${redData.length}</span> | 
                             <span class="text-blue-600">Blue: ${blueData.length}</span>
                         </p>
+                        <p class="text-xs text-gray-400 mt-1">Click to download</p>
                     `;
                     container.appendChild(info);
                     
                     container.addEventListener('click', () => {
                         const link = document.createElement('a');
-                        link.download = `sound_object_sheets_${freq}Hz.png`;
+                        link.download = `sound_object_composite_${freq}Hz.png`;
                         link.href = canvas.toDataURL();
                         link.click();
                     });
@@ -324,7 +339,7 @@
                     vizGrid.appendChild(container);
                 });
                 
-                updateProgress(75, 'Generating statistics...');
+                updateProgress(75, `Generated ${imagesGenerated} composite images. Calculating statistics...`);
                 
                 // Generate statistics table
                 const statsBody = document.getElementById('statistics-body');
@@ -390,12 +405,12 @@
                         <div class="text-sm text-gray-600 font-semibold">Total Shapes</div>
                     </div>
                     <div class="bg-purple-50 p-4 rounded-lg border-2 border-purple-200">
-                        <div class="text-3xl font-bold text-purple-700">${FREQUENCIES.filter(f => participantData[f].red.length > 0 || participantData[f].blue.length > 0).length}</div>
-                        <div class="text-sm text-gray-600 font-semibold">Frequencies</div>
+                        <div class="text-3xl font-bold text-purple-700">${imagesGenerated}</div>
+                        <div class="text-sm text-gray-600 font-semibold">Composite Images</div>
                     </div>
                     <div class="bg-amber-50 p-4 rounded-lg border-2 border-amber-200">
-                        <div class="text-xl font-bold text-amber-700">📊 Google Sheets</div>
-                        <div class="text-sm text-gray-600 font-semibold">Data Source</div>
+                        <div class="text-xl font-bold text-amber-700">📊 "Data" Tab</div>
+                        <div class="text-sm text-gray-600 font-semibold">Source</div>
                     </div>
                 `;
                 
@@ -539,6 +554,11 @@
             ctx.font = 'bold 24px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(`${frequency} Hz`, center, 40);
+            
+            // Subtitle
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#666666';
+            ctx.fillText(`Composite from ${redData.length + blueData.length} shapes`, center, 60);
             
             return canvas;
         }
