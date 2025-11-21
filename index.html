@@ -114,10 +114,13 @@
             <div class="bg-white p-6 rounded-xl shadow-lg mb-4">
                 <h2 class="text-2xl font-bold text-gray-800 mb-2">11 Composite Images (One Per Frequency)</h2>
                 <p class="text-sm text-gray-600 mb-2">
-                    Each image shows averaged shapes at one frequency, with circles representing individual participants based on centroid position and area from the Data tab
+                    Each image shows clean averaged circles at one frequency with individual participant shapes in light gray background
                 </p>
                 <p class="text-xs text-gray-500">
-                    🔴 Red (solid) = In-phase • 🔵 Blue (dashed) = Out-of-phase • Light circles = individual participants • Bold outline = average
+                    🔴 Red (solid line) = In-phase average • 🔵 Blue (dashed line) = Out-of-phase average • Gray circles = individual participants
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    Grid lines mark 1-unit intervals • Reference circle = 3 units radius • Center (0,0) marked by axis intersection
                 </p>
                 <p class="text-xs text-gray-500 mt-1">
                     Click any image to download as PNG
@@ -474,16 +477,31 @@
             const center = CANVAS_SIZE / 2;
             const scale = SCALE_FACTOR;
             
-            // Background circle
-            ctx.beginPath();
-            ctx.arc(center, center, BACKGROUND_CIRCLE_RADIUS_UNITS * scale, 0, 2 * Math.PI);
-            ctx.strokeStyle = '#cccccc';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // Axes
-            ctx.strokeStyle = '#dddddd';
+            // Draw grid lines (light gray)
+            ctx.strokeStyle = '#e5e7eb';
             ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let i = -UNIT_RANGE; i <= UNIT_RANGE; i++) {
+                const x = center + (i * scale);
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, CANVAS_SIZE);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let i = -UNIT_RANGE; i <= UNIT_RANGE; i++) {
+                const y = center - (i * scale);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(CANVAS_SIZE, y);
+                ctx.stroke();
+            }
+            
+            // Draw axes (darker)
+            ctx.strokeStyle = '#9ca3af';
+            ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(0, center);
             ctx.lineTo(CANVAS_SIZE, center);
@@ -491,74 +509,106 @@
             ctx.lineTo(center, CANVAS_SIZE);
             ctx.stroke();
             
-            // Draw shapes
-            function drawShapes(dataArray, color, isDashed) {
-                if (dataArray.length === 0) return;
+            // Draw 3-unit reference circle (dashed)
+            ctx.beginPath();
+            ctx.arc(center, center, BACKGROUND_CIRCLE_RADIUS_UNITS * scale, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#d1d5db';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Helper function to draw individual participant shapes in gray
+            function drawGrayShapes(dataArray) {
+                ctx.strokeStyle = '#d1d5db';  // Light gray
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.4;
                 
-                // Individual circles (transparent)
-                ctx.globalAlpha = 0.15;
-                dataArray.forEach(d => {
-                    const x = center + d.centroid.x * scale;
-                    const y = center - d.centroid.y * scale;
-                    const r = d.radius * scale;
+                dataArray.forEach(shape => {
+                    const x = center + (shape.centroid.x * scale);
+                    const y = center - (shape.centroid.y * scale);
+                    const r = shape.radius * scale;
                     
                     ctx.beginPath();
                     ctx.arc(x, y, r, 0, 2 * Math.PI);
-                    ctx.fillStyle = color;
-                    ctx.fill();
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = 0.5;
                     ctx.stroke();
                 });
+                
                 ctx.globalAlpha = 1.0;
+            }
+            
+            // Helper function to draw averaged circle
+            function drawAveragedCircle(dataArray, color, isDashed) {
+                if (dataArray.length === 0) return;
                 
-                // Average circle
-                const avgX = mean(dataArray.map(d => d.centroid.x));
-                const avgY = mean(dataArray.map(d => d.centroid.y));
-                const avgR = mean(dataArray.map(d => d.radius));
+                // Calculate averages
+                const avgX = dataArray.reduce((sum, s) => sum + s.centroid.x, 0) / dataArray.length;
+                const avgY = dataArray.reduce((sum, s) => sum + s.centroid.y, 0) / dataArray.length;
+                const avgR = dataArray.reduce((sum, s) => sum + s.radius, 0) / dataArray.length;
                 
-                const x = center + avgX * scale;
-                const y = center - avgY * scale;
+                const x = center + (avgX * scale);
+                const y = center - (avgY * scale);
                 const r = avgR * scale;
                 
-                // Fill
-                ctx.fillStyle = color + '26';
-                ctx.beginPath();
-                ctx.arc(x, y, r, 0, 2 * Math.PI);
-                ctx.fill();
-                
-                // Outline
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 3;
+                
                 if (isDashed) {
-                    ctx.setLineDash([10, 6]);
+                    ctx.setLineDash([8, 4]);
                 }
+                
                 ctx.beginPath();
                 ctx.arc(x, y, r, 0, 2 * Math.PI);
                 ctx.stroke();
-                ctx.setLineDash([]);
                 
-                // Centroid marker
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.arc(x, y, 4, 0, 2 * Math.PI);
-                ctx.fill();
+                ctx.setLineDash([]);
             }
             
-            // Blue first, then red
-            drawShapes(blueData, '#0000ff', true);
-            drawShapes(redData, '#ff0000', false);
+            // Draw all gray background shapes first
+            if (redData.length > 0) {
+                drawGrayShapes(redData);
+            }
+            if (blueData.length > 0) {
+                drawGrayShapes(blueData);
+            }
             
-            // Title
+            // Draw averaged circles on top
+            if (blueData.length > 0) {
+                drawAveragedCircle(blueData, '#3b82f6', true);  // Blue, dashed
+            }
+            if (redData.length > 0) {
+                drawAveragedCircle(redData, '#dc2626', false);  // Red, solid
+            }
+            
+            // Title at top
             ctx.fillStyle = '#000000';
-            ctx.font = 'bold 24px Arial';
+            ctx.font = 'bold 18px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(`${frequency} Hz`, center, 40);
+            ctx.fillText(`${frequency} Hz`, center, 25);
             
-            // Subtitle
+            // Stats below title
+            const totalShapes = redData.length + blueData.length;
+            const avgRadiusRed = redData.length > 0 
+                ? (redData.reduce((sum, s) => sum + s.radius, 0) / redData.length).toFixed(2)
+                : null;
+            const avgRadiusBlue = blueData.length > 0
+                ? (blueData.reduce((sum, s) => sum + s.radius, 0) / blueData.length).toFixed(2)
+                : null;
+            
             ctx.font = '12px Arial';
             ctx.fillStyle = '#666666';
-            ctx.fillText(`Composite from ${redData.length + blueData.length} shapes`, center, 60);
+            
+            let statsText = `N=${totalShapes}`;
+            if (avgRadiusRed && avgRadiusBlue) {
+                const overallAvg = ((parseFloat(avgRadiusRed) + parseFloat(avgRadiusBlue)) / 2).toFixed(2);
+                statsText += `, mean r=${overallAvg} (centroid avg)`;
+            } else if (avgRadiusRed) {
+                statsText += `, mean r=${avgRadiusRed} (centroid avg)`;
+            } else if (avgRadiusBlue) {
+                statsText += `, mean r=${avgRadiusBlue} (centroid avg)`;
+            }
+            
+            ctx.fillText(statsText, center, 45);
             
             return canvas;
         }
