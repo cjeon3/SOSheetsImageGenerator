@@ -120,7 +120,7 @@
                     🔴 Red (solid line) = In-phase average • 🔵 Blue (dashed line) = Out-of-phase average • Gray circles = individual participants
                 </p>
                 <p class="text-xs text-gray-500 mt-1">
-                    Grid lines mark 1-unit intervals • Reference circle = 3 units radius • Center (0,0) marked by axis intersection
+                    Grid lines mark 1-unit intervals • Reference circle (black) = 3 units radius • Center (0,0) marked by axis intersection
                 </p>
                 <p class="text-xs text-gray-500 mt-1">
                     Click any image to download as PNG
@@ -509,20 +509,18 @@
             ctx.lineTo(center, CANVAS_SIZE);
             ctx.stroke();
             
-            // Draw 3-unit reference circle (dashed)
+            // Draw 3-unit reference circle (solid black)
             ctx.beginPath();
             ctx.arc(center, center, BACKGROUND_CIRCLE_RADIUS_UNITS * scale, 0, 2 * Math.PI);
-            ctx.strokeStyle = '#d1d5db';
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#000000';  // Black
+            ctx.lineWidth = 1;  // Thin
             ctx.stroke();
-            ctx.setLineDash([]);
             
             // Helper function to draw individual participant shapes in gray
             function drawGrayShapes(dataArray) {
-                ctx.strokeStyle = '#d1d5db';  // Light gray
+                ctx.strokeStyle = '#9ca3af';  // Slightly darker gray
                 ctx.lineWidth = 1;
-                ctx.globalAlpha = 0.4;
+                ctx.globalAlpha = 0.5;  // Slightly more opaque (was 0.4)
                 
                 dataArray.forEach(shape => {
                     const x = center + (shape.centroid.x * scale);
