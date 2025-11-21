@@ -1,5 +1,270 @@
 # Sound Object Composite Image Generator - Technical Guide
 
+# Updated Visualization Style - Clean Composite Images
+
+## What Changed
+
+The Sound Object Composite Image Generator has been updated to match the publication-ready style shown in your reference image.
+
+## New Visualization Style
+
+### Before (Old Style):
+- Semi-transparent filled circles for individuals
+- Thick colored outlines for averages
+- Centroid dots
+- Simple axes
+
+### After (New Style):
+- **Grid lines** at 1-unit intervals (matching the original drawing tool)
+- **Gray circles** (light, thin lines) for all individual participants
+- **Clean red line** (solid, 3px) for in-phase average
+- **Clean blue line** (dashed, 3px) for out-of-phase average
+- **Reference circle** (3-unit radius, dashed gray)
+- **Centered at (0,0)** with axes intersection clearly visible
+- **Clean typography** with N count and mean radius at top
+
+## Visual Elements
+
+### Grid System
+```
+┌─────────────────────────────────────┐
+│  31 Hz                               │
+│  N=24, mean r=2.36 (centroid avg)   │
+│                                      │
+│  ┊ ┊ ┊ ┊ │ ┊ ┊ ┊ ┊    ← Grid lines  │
+│  ┊ ┊ ┊ ┊ │ ┊ ┊ ┊ ┊      (1 unit)    │
+│ ─────────●─────────    ← Axes       │
+│  ┊ ┊ ┊ ┊ │ ┊ ┊ ┊ ┊      (0,0)       │
+│  ┊ ┊ ┊ ┊ │ ┊ ┊ ┊ ┊                  │
+│         (3 units)                    │
+│          ⊙                           │
+│         Reference                    │
+│          Circle                      │
+└─────────────────────────────────────┘
+```
+
+### Color Coding
+- **Red solid line**: In-phase (0°) average
+- **Blue dashed line**: Out-of-phase (180°) average  
+- **Light gray**: Individual participant shapes
+- **Dark gray**: Axes and grid
+
+### Layout
+- Frequency label: Top center, bold 18px
+- Statistics: Below frequency, 12px
+- Grid: Every 1 unit (10 units total range = -10 to +10)
+- Reference circle: 3 units radius (dashed)
+- Axes: Dark gray, 2px width
+
+## Code Changes
+
+### Main Drawing Function
+
+The new `drawVisualization()` function now:
+
+1. **Draws grid first** (light gray, 1px lines every 1 unit)
+2. **Draws axes** (darker gray, 2px at x=0 and y=0)
+3. **Draws reference circle** (3-unit radius, dashed)
+4. **Draws all gray circles** (individual participants, light gray, 0.4 alpha)
+5. **Draws averaged circles on top** (red solid, blue dashed, 3px width)
+6. **Adds title and stats** (frequency, N, mean radius)
+
+### Key Functions
+
+```javascript
+// Helper: Draw gray background shapes
+function drawGrayShapes(dataArray) {
+    ctx.strokeStyle = '#d1d5db';  // Light gray
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.4;
+    
+    dataArray.forEach(shape => {
+        const x = center + (shape.centroid.x * scale);
+        const y = center - (shape.centroid.y * scale);
+        const r = shape.radius * scale;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, 2 * Math.PI);
+        ctx.stroke();
+    });
+    
+    ctx.globalAlpha = 1.0;
+}
+
+// Helper: Draw clean averaged circle
+function drawAveragedCircle(dataArray, color, isDashed) {
+    // Calculate averages
+    const avgX = mean(dataArray.map(s => s.centroid.x));
+    const avgY = mean(dataArray.map(s => s.centroid.y));
+    const avgR = mean(dataArray.map(s => s.radius));
+    
+    // Convert to canvas coordinates
+    const x = center + (avgX * scale);
+    const y = center - (avgY * scale);
+    const r = avgR * scale;
+    
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    
+    if (isDashed) {
+        ctx.setLineDash([8, 4]);  // Blue is dashed
+    }
+    
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 2 * Math.PI);
+    ctx.stroke();
+    
+    ctx.setLineDash([]);
+}
+```
+
+## Coordinate System
+
+The visualization now clearly shows the coordinate system matching the original drawing tool:
+
+### Grid Space
+- **Range**: -10 to +10 units (both X and Y)
+- **Grid lines**: Every 1 unit
+- **Center**: (0, 0) marked by axis intersection
+- **Reference circle**: 3 units radius
+
+### Canvas Space
+- **Size**: 600×600 pixels
+- **Scale**: 30 pixels per unit (600 / 20 = 30)
+- **Center**: (300, 300) pixels
+
+### Coordinate Transforms
+```javascript
+// Unit to Canvas
+x_canvas = 300 + (x_unit × 30)
+y_canvas = 300 - (y_unit × 30)  // Y flipped
+
+// Example
+(0, 0)     → (300, 300)  // Center
+(3, 0)     → (390, 300)  // Right edge of reference circle
+(0, 3)     → (300, 210)  // Top edge of reference circle
+(-10, -10) → (0, 600)    // Bottom-left corner
+(10, 10)   → (600, 0)    // Top-right corner
+```
+
+## Statistics Display
+
+Each image now shows:
+```
+31 Hz
+N=24, mean r=2.36 (centroid avg)
+```
+
+Where:
+- **N**: Total number of shapes (red + blue)
+- **mean r**: Average radius across all shapes
+- **(centroid avg)**: Clarifies this is the average of centroids, not contours
+
+## Comparison to Reference Image
+
+Your reference image shows:
+- ✅ Clean red/blue lines
+- ✅ Gray background shapes
+- ✅ Grid at 1-unit intervals
+- ✅ 3-unit reference circle
+- ✅ Centered at (0,0)
+- ✅ Frequency and stats at top
+- ✅ Red solid, blue dashed
+
+Our implementation matches all these features!
+
+## Benefits of New Style
+
+1. **Publication-ready**: Clean, professional appearance
+2. **Clear visual hierarchy**: Averages stand out, individuals recede
+3. **Grid context**: Easy to see position and scale
+4. **Consistent with original**: Matches the drawing tool's coordinate system
+5. **Easy to interpret**: Red/blue distinction is obvious
+6. **Standardized**: All 11 images use same style
+
+## File Format
+
+Images are still:
+- **Format**: PNG
+- **Size**: 600×600 pixels
+- **Resolution**: Suitable for print and web
+- **Filename**: `sound_object_composite_${freq}Hz.png`
+
+## Using the Updated Generator
+
+1. Deploy Google Apps Script (no changes needed)
+2. Open `sound_object_sheets_viewer.html`
+3. Paste Web App URL
+4. Click "Fetch Data & Generate Visualizations"
+5. Get 11 clean composite images matching your reference style!
+
+## Technical Notes
+
+### Drawing Order (Important!)
+```
+1. White background
+2. Grid lines (light gray)
+3. Axes (dark gray)
+4. Reference circle (dashed gray)
+5. All gray circles (individual participants)
+6. Blue averaged circle (dashed)
+7. Red averaged circle (solid)
+8. Title and stats
+```
+
+This order ensures:
+- Background elements don't cover data
+- Individual shapes are behind averages
+- Averages are clearly visible on top
+
+### Colors Used
+
+| Element | Color | Hex Code |
+|---------|-------|----------|
+| Grid lines | Light gray | #e5e7eb |
+| Axes | Gray | #9ca3af |
+| Reference circle | Gray | #d1d5db |
+| Individual shapes | Light gray | #d1d5db (40% opacity) |
+| Red average | Red | #dc2626 |
+| Blue average | Blue | #3b82f6 |
+| Text | Black | #000000 |
+| Stats | Dark gray | #666666 |
+
+### Line Widths
+
+| Element | Width (px) |
+|---------|-----------|
+| Grid lines | 1 |
+| Axes | 2 |
+| Reference circle | 1.5 |
+| Individual shapes | 1 |
+| Averaged circles | 3 |
+
+## Example Output
+
+For 31 Hz with 12 participants:
+- Shows 12 gray circles (one per participant)
+- Shows 1 red solid circle (average of in-phase)
+- Shows 1 blue dashed circle (average of out-of-phase)
+- Grid clearly visible
+- Reference circle shows 3-unit scale
+- Title: "31 Hz"
+- Stats: "N=12, mean r=2.36 (centroid avg)"
+
+## Migration Notes
+
+If you've already deployed the old version:
+1. Replace the `sound_object_sheets_viewer.html` file
+2. No need to redeploy Google Apps Script
+3. Refresh the page in your browser
+4. Generate new composites with updated style
+
+The data and API remain exactly the same - only the visualization changed!
+
+---
+
+**Result**: Clean, publication-ready composite images matching your reference image style! 📊✨
+
 ## 📖 Overview
 
 This system generates composite visualizations of sound object drawings by reading data from Google Sheets and creating averaged shape representations. It consists of two main components that work together to transform raw centroid and area data into visual composite images.
